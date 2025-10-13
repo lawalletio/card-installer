@@ -14,12 +14,9 @@ import {
 import {Card, Title} from 'react-native-paper';
 import Config from 'react-native-config';
 
-import skins from '../constants/skins';
 import NfcManager, {NfcTech} from 'react-native-nfc-manager';
 import WriteModal from '../components/WriteModal';
-import {createInitializeCardEvent} from '../lib/utils';
 
-import {getEventHash, getPublicKey, getSignature} from 'nostr-tools';
 import {useLaWallet} from '../providers/LaWallet';
 
 const CardStatus = {
@@ -30,11 +27,9 @@ const CardStatus = {
 };
 
 const ADMIN_URL = Config.ADMIN_URL;
-const CARD_MODULE_PUBLIC_KEY = Config.CARD_MODULE_PUBLIC_KEY;
-const NOSTR_PRIVATE_KEY = Config.NOSTR_PRIVATE_KEY;
 const LNURLW_ENDPOINT = Config.LNURLW_ENDPOINT;
 
-export default function CreateBulkBoltcardScreen(props) {
+export default function CreateBulkBoltcardScreen() {
   const [cardData, setCardData] = useState();
 
   const [cardStatus, setCardStatus] = useState(CardStatus.IDLE);
@@ -44,6 +39,64 @@ export default function CreateBulkBoltcardScreen(props) {
   const [error, setError] = useState();
 
   const navigation = useNavigation();
+  const {isLogged, skins} = useLaWallet();
+
+  const requestCreateCard = useCallback(async (_cardUID, _skin) => {
+    setCardStatus(CardStatus.CREATING_CARD);
+    // Make request to create card
+
+    const url = `${ADMIN_URL}/ntag424`;
+    // console.info('url', url);
+    // create request
+    ToastAndroid.showWithGravity(
+      `Creating card : ${url}`,
+      ToastAndroid.SHORT,
+      ToastAndroid.TOP,
+    );
+
+    const body = {
+      designId: _skin.value,
+      cardUID: _cardUID,
+    };
+
+    // console.info('skin', _skin);
+    // console.info('cardUID', _cardUID);
+
+    // console.info('event');
+    // console.info(JSON.stringify(event));
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+      .then(response => {
+        // console.info('response', JSON.stringify(response));
+
+        if (!response.ok) {
+          throw new Error(`Server returned error ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(json => {
+        const data = JSON.parse(json.content);
+        if (!(data.k0 && data.k1 && data.k2 && data.k3 && data.k4)) {
+          setCardStatus(CardStatus.IDLE);
+          alert('The JSON response must contain k0, k1, k2, k3, k4');
+          return;
+        }
+        setCardStatus(CardStatus.WRITING);
+        data.lnurlw_base = LNURLW_ENDPOINT;
+        setCardData(data);
+      })
+      .catch(_error => {
+        setError(JSON.stringify(_error));
+        alert(_error.message);
+        setCardStatus(CardStatus.IDLE);
+        console.error(_error);
+      });
+  }, []);
 
   const onReadCard = useCallback(
     event => {
@@ -74,71 +127,6 @@ export default function CreateBulkBoltcardScreen(props) {
     },
     [requestCreateCard, skin],
   );
-
-  const requestCreateCard = useCallback(async (_cardUID, _skin) => {
-    setCardStatus(CardStatus.CREATING_CARD);
-    // Make request to create card
-
-    const url = `${ADMIN_URL}/ntag424`;
-    // console.info('url', url);
-    // create request
-    ToastAndroid.showWithGravity(
-      `Creating card : ${url}`,
-      ToastAndroid.SHORT,
-      ToastAndroid.TOP,
-    );
-
-    const event = createInitializeCardEvent(
-      _cardUID,
-      {
-        uuid: _skin.value,
-        name: _skin.label,
-      },
-      CARD_MODULE_PUBLIC_KEY,
-    );
-
-    event.pubkey = getPublicKey(NOSTR_PRIVATE_KEY);
-    event.id = getEventHash(event);
-    event.sig = getSignature(event, NOSTR_PRIVATE_KEY);
-
-    // console.info('skin', _skin);
-    // console.info('cardUID', _cardUID);
-
-    // console.info('event');
-    // console.info(JSON.stringify(event));
-    fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(event),
-    })
-      .then(response => {
-        // console.info('response', JSON.stringify(response));
-
-        if (!response.ok) {
-          throw new Error(`Server returned error ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(json => {
-        const data = JSON.parse(json.content);
-        if (!(data.k0 && data.k1 && data.k2 && data.k3 && data.k4)) {
-          setCardStatus(CardStatus.IDLE);
-          alert('The JSON response must contain k0, k1, k2, k3, k4');
-          return;
-        }
-        setCardStatus(CardStatus.WRITING);
-        data.lnurlw_base = LNURLW_ENDPOINT;
-        setCardData(data);
-      })
-      .catch(_error => {
-        setError(JSON.stringify(_error));
-        alert(_error.message);
-        setCardStatus(CardStatus.IDLE);
-        console.error(_error);
-      });
-  }, []);
 
   const startReading = useCallback(async () => {
     await NfcManager.start();
@@ -173,13 +161,13 @@ export default function CreateBulkBoltcardScreen(props) {
   useEffect(() => {
     switch (cardStatus) {
       case CardStatus.READING:
-        setError();
-        setCardData();
+        setError(undefined);
+        setCardData(undefined);
         startReading();
         break;
 
       default:
-        setCardData();
+        setCardData(undefined);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardStatus]);
@@ -193,8 +181,6 @@ export default function CreateBulkBoltcardScreen(props) {
     // console.info('pubkey');
     // console.info(pubkey);
   }, []);
-
-  const {isLogged} = useLaWallet();
 
   if (!isLogged) {
     return (
@@ -264,6 +250,8 @@ export default function CreateBulkBoltcardScreen(props) {
                 onFocus={() => setOpenSkin(true)}
                 onBlur={() => setOpenSkin(false)}
                 onChange={item => {
+                  console.info('******** ITEM ********');
+                  console.info(JSON.stringify(item));
                   setSkin(item);
                   setOpenSkin(false);
                 }}
@@ -271,7 +259,14 @@ export default function CreateBulkBoltcardScreen(props) {
             </>
           )}
 
-          {skin && <Image style={styles.cardImage} source={skin.file} />}
+          {skin && (
+            <Image
+              style={styles.cardImage}
+              source={
+                typeof skin.file === 'string' ? {uri: skin.file} : skin.file
+              }
+            />
+          )}
         </Card.Content>
       </Card>
 

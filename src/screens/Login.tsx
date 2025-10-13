@@ -11,7 +11,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useLaWallet} from '../providers/LaWallet';
 
 export default function LoginScreen({navigation}) {
-  const {login, isLogged, logout} = useLaWallet();
+  const {login, isLogged, isLoading, logout} = useLaWallet();
 
   const handleLogin = () => {
     login('https://app.lawallet.ar');
@@ -34,21 +34,23 @@ export default function LoginScreen({navigation}) {
           <Card.Content>
             <View
               style={{flexDirection: 'row', justifyContent: 'space-evenly'}}>
-              {!isLogged ? (
+              {isLoading ? (
+                <Text>Logging in...</Text>
+              ) : isLogged ? (
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() => handleLogout()}>
+                  <Text style={styles.buttonText}>
+                    <Ionicons name="log-out" size={20} color="white" /> Logout
+                  </Text>
+                </TouchableOpacity>
+              ) : (
                 <TouchableOpacity
                   style={styles.button}
                   onPress={() => handleLogin()}>
                   <Text style={styles.buttonText}>
                     <Ionicons name="log-in" size={20} color="white" /> Login to
                     LaWallet
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={() => handleLogout()}>
-                  <Text style={styles.buttonText}>
-                    <Ionicons name="log-out" size={20} color="white" /> Logout
                   </Text>
                 </TouchableOpacity>
               )}
