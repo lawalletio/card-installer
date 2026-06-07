@@ -1,6 +1,7 @@
 import React from 'react';
 
-import {Button, StyleSheet} from 'react-native';
+import {Alert, Button, StyleSheet} from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 import {useCameraDevices} from 'react-native-vision-camera';
 import {Camera} from 'react-native-vision-camera';
@@ -64,14 +65,21 @@ export default function ScanScreen({route, navigation}) {
           frameProcessorFps={5}
         />
         <Button
-          onPress={() =>
-            mode === 'raw'
-              ? onSuccess('eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJ0ZXN0IiwicHViY2V5IjoiYWJjZCIsInJvbGUiOiJBRE1JTiIsInBlcm1pc3Npb25zIjpbImNhcmRzOndyaXRlIl0sInNjb3BlcyI6WyJjYXJkczp3cml0ZSJdLCJzdWIiOiJ0ZXN0IiwiaXNzIjoibGF3YWxsZXQtbndlIiwiYXVkIjoibGF3YWxsZXQtdXNlcnMiLCJleHAiOjk5OTk5OTk5OTl9.abc')
-              : onSuccess(
-                  'https://app.lawallet.ar/start?i=987654321&c=12345678',
-                )
-          }
-          title="Test"
+          onPress={async () => {
+            const text = (await Clipboard.getString()).trim();
+            if (!text) {
+              Alert.alert('Nothing to paste', 'Your clipboard is empty.');
+              return;
+            }
+            // A JWT is three base64url segments separated by dots.
+            const isJwt = /^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]*$/.test(text);
+            if (!isJwt) {
+              Alert.alert('Invalid JWT', 'The clipboard content does not look like a valid JWT.');
+              return;
+            }
+            onSuccess(text);
+          }}
+          title="PASTE JWT"
         />
         <Button onPress={goBack} title="Close" />
       </>
