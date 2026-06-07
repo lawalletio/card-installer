@@ -85,7 +85,7 @@ const LaWalletContext = createContext<LaWalletContextType>({
 
 export const LaWalletProvider = ({children}: {children: React.ReactNode}) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [baseUrl, setBaseUrlSt] = useState('');
+  const [baseUrl, setBaseUrlSt] = useState('https://beta.lawallet.io');
   const [jwt, setJwtSt] = useState<string | null>(null);
   const [claims, setClaimsSt] = useState<DeviceJwtClaims | null>(null);
   const [tokenError, setTokenError] = useState<'expired' | 'invalid' | null>(
@@ -96,7 +96,7 @@ export const LaWalletProvider = ({children}: {children: React.ReactNode}) => {
   // Refs keep the latest values accessible in stable callbacks without
   // recreating them on every state change.
   const jwtRef = useRef<string | null>(null);
-  const baseUrlRef = useRef<string>('');
+  const baseUrlRef = useRef<string>('https://beta.lawallet.io');
   const claimsRef = useRef<DeviceJwtClaims | null>(null);
 
   // Helpers that keep refs and state in sync.

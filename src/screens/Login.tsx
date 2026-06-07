@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {Card, Title} from 'react-native-paper';
+import {Card, ProgressBar, Title} from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useLaWallet} from '../providers/LaWallet';
 import {secondsUntilExpiry} from '../lib/jwt';
@@ -43,6 +43,7 @@ export default function LoginScreen({route}) {
 
   // Local state for the base URL text input (not persisted until Save).
   const [urlInput, setUrlInput] = useState(baseUrl);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -72,14 +73,19 @@ export default function LoginScreen({route}) {
   useEffect(() => {
     if (!qrData?.raw || !timestamp) return;
     (async () => {
-      const res = await loginWithToken(qrData.raw);
-      if (!res.ok) {
-        Alert.alert(
-          'Login failed',
-          res.reason === 'expired'
-            ? 'Token is already expired — ask the admin for a fresh QR.'
-            : 'That QR is not a valid device token.',
-        );
+      setIsLoggingIn(true);
+      try {
+        const res = await loginWithToken(qrData.raw);
+        if (!res.ok) {
+          Alert.alert(
+            'Login failed',
+            res.reason === 'expired'
+              ? 'Token is already expired — ask the admin for a fresh QR.'
+              : 'That QR is not a valid device token.',
+          );
+        }
+      } finally {
+        setIsLoggingIn(false);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,6 +109,7 @@ export default function LoginScreen({route}) {
     : '';
 
   return (
+    <View style={{flex: 1}}>
     <ScrollView>
       {/* Base URL configuration */}
       <Card style={styles.card}>
@@ -114,7 +121,7 @@ export default function LoginScreen({route}) {
               style={styles.urlInput}
               value={urlInput}
               onChangeText={setUrlInput}
-              placeholder="https://app.lawallet.ar"
+              placeholder="https://beta.lawallet.io"
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
@@ -179,6 +186,14 @@ export default function LoginScreen({route}) {
         </Card.Content>
       </Card>
     </ScrollView>
+
+      {isLoggingIn && (
+        <View style={styles.loginOverlay}>
+          <Text style={styles.loginOverlayTitle}>Logging in…</Text>
+          <ProgressBar indeterminate color="#1976D2" style={styles.loginProgressBar} />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -250,6 +265,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     marginTop: 6,
+  },
+  loginOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    paddingHorizontal: 40,
+  },
+  loginOverlayTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  loginProgressBar: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
   },
   button: {
     backgroundColor: 'rgb(0,122,255)',
