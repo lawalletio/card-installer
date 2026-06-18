@@ -165,8 +165,10 @@ keytool -genkeypair -v -keystore android/app/my-upload-key.keystore \
 2. **Bulk Create** — pick a card design, tap **Tap Card to Write**, then hold a blank
    NTAG424 card to the phone. The progress ring fills clockwise as the keys and
    `lnurlw` are written and verified. Provision more cards by tapping them in turn.
-3. **Wipe Card** — tap a programmed card; the app reads its UID, fetches its keys,
-   wipes all keys to zero, clears the NDEF, and deletes the card server-side.
+3. **Wipe Card** — tap a programmed card; the app reads its UID, fetches the reset
+   keys from the server's `/api/cards/:id/wipe` endpoint (which also **unpairs** the
+   card from its user), wipes all keys to zero over NFC, clears the NDEF, and deletes
+   the card server-side.
 4. **Read NFC** — tap any card to inspect its `lnurlw` URL and PICC/CMAC parameters.
 
 > ⚠️ Writing/wiping is destructive. If you lose a card's keys you may be unable to
@@ -174,8 +176,10 @@ keytool -genkeypair -v -keystore android/app/my-upload-key.keystore \
 
 ## Security
 
-- NTAG424 keys are generated and held by your LaWallet / Boltcard server; the app
-  fetches them over an authenticated session to write or wipe cards.
+- NTAG424 keys are generated and held by your LaWallet / Boltcard server. Regular
+  card reads (`GET /api/cards/:id`) never expose them — the app fetches keys only
+  from the dedicated `/write` (program) and `/wipe` (reset) endpoints, each of which
+  **unpairs** the card from its user as a side effect of exporting its keys.
 - Keep your keys secret and avoid other listening NFC devices in range while writing.
 - Do **not** commit signing credentials. If real keystore passwords were ever
   committed to `android/gradle.properties`, rotate them and move the values to

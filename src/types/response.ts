@@ -22,13 +22,11 @@ export type CardDesign = {
   archivedAt?: string | null;
 };
 
-export type Ntag424Keys = {
+// Public NTAG424 fields returned by the read endpoints (GET /api/cards[/:id]).
+// Keys are NOT included — they are only exported by the /write and /wipe
+// endpoints (both of which unpair the card server-side).
+export type Ntag424Public = {
   cid: string;
-  k0: string;
-  k1: string;
-  k2: string;
-  k3: string;
-  k4: string;
   ctr: number;
   createdAt: string;
 };
@@ -36,7 +34,7 @@ export type Ntag424Keys = {
 export type Card = {
   id: string; // server-generated hex id (NOT the chip uid)
   design: {id: string; imageUrl: string; description: string; createdAt: string};
-  ntag424: Ntag424Keys;
+  ntag424: Ntag424Public;
   createdAt: string;
   title?: string;
   lastUsedAt?: string;
@@ -74,4 +72,17 @@ export type Ntag424WriteData = {
   lnurlw_base: string; // lnurlw://<host>/api/cards/<id>/scan
   protocol_name: 'new_bolt_card_response';
   protocol_version: '1';
+};
+
+// Reset payload from GET /api/cards/:id/wipe. Keys are top-level (not nested
+// under `ntag424`). Fetching this endpoint unpairs the card server-side.
+export type Ntag424WipeData = {
+  action: 'wipe';
+  k0: string;
+  k1: string;
+  k2: string;
+  k3: string;
+  k4: string;
+  uid: string;
+  version: 1;
 };

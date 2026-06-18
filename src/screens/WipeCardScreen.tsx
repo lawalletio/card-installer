@@ -13,7 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import NfcManager, {Ndef, NfcTech} from 'react-native-nfc-manager';
 import Ntag424 from '../class/Ntag424';
 import {useLaWallet} from '../providers/LaWallet';
-import {Card} from '../types/response';
+import {Card, Ntag424WipeData} from '../types/response';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -199,10 +199,19 @@ export default function WipeCardScreen() {
     setProgress([]);
     setStepSynced('writing');
 
-    const {k0, k1, k2, k3, k4} = card.ntag424;
     const id = card.id;
 
     try {
+      // Read responses no longer carry the NTAG424 keys — fetch the reset
+      // payload from the dedicated /wipe endpoint. NOTE: fetching it unpairs the
+      // card from its user server-side (it's deleted below anyway).
+      const keysRes = await authFetch('/api/cards/' + id + '/wipe');
+      if (!keysRes.ok) {
+        handleError(`Server error (${keysRes.status}) fetching reset keys.`);
+        return;
+      }
+      const {k0, k1, k2, k3, k4} = (await keysRes.json()) as Ntag424WipeData;
+
       // Clear any stale NFC request so requestTechnology doesn't fail with
       // "one request at a time" when arriving from another NFC screen.
       await NfcManager.start().catch(() => {});
