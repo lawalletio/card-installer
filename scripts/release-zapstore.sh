@@ -37,8 +37,12 @@ export KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD:-$(grep -E '^MYAPP_UPLOAD_STORE_PA
 if [ "${1:-}" = "link" ]; then
   [ -f "$KEYSTORE" ] || { echo "✗ keystore not found: $KEYSTORE"; exit 1; }
   [ -n "${KEYSTORE_PASSWORD:-}" ] || { echo "✗ KEYSTORE_PASSWORD not found in $GRADLE_PROPS"; exit 1; }
-  echo "→ Linking $KEYSTORE to your Nostr identity (one-time)…"
-  exec zsp identity --link-key "$KEYSTORE"
+  # zsp picks the keystore format from the file extension (.keystore => JKS),
+  # but ours is PKCS12 — give it a .p12 copy in a temp dir (cleaned on exit).
+  TMPD="$(mktemp -d)"; trap 'rm -rf "$TMPD"' EXIT
+  cp "$KEYSTORE" "$TMPD/upload.p12"
+  echo "→ Linking signing key to your Nostr identity (one-time)…"
+  zsp identity --link-key "$TMPD/upload.p12"
 fi
 
 # --- build a production-signed release APK ---------------------------------
