@@ -69,7 +69,7 @@ function InfoRow({label, value, mono, onCopy}) {
 export default function ReadNFCScreen() {
   const {authFetch, isLogged} = useLaWallet();
 
-  // step: 'reading' | 'result' | 'error'
+  // step: 'reading' | 'loading' | 'result' | 'error'
   const [step, setStep] = useState('reading');
   const [errorMsg, setErrorMsg] = useState(null);
 
@@ -132,8 +132,20 @@ export default function ReadNFCScreen() {
     setServerCard(null);
 
     try {
+      // A scan cancelled by a tab switch can leave a pending request, so the
+      // next requestTechnology fails with "one request at a time" when we
+      // return to this tab and NFC never starts. Start NFC and clear any
+      // stale request first — this is what makes the wipe/bulk flows reliable.
+      await NfcManager.start().catch(() => {});
+      await NfcManager.cancelTechnologyRequest().catch(() => {});
+      if (mySeq !== readSeq.current) return;
+
       await NfcManager.requestTechnology(NfcTech.IsoDep);
       const tag = await NfcManager.getTag();
+
+      // Card detected — show a loading spinner while we read the chip data
+      // (version, key versions) and look up the server record.
+      if (mySeq === readSeq.current) setStep('loading');
 
       // ── NDEF URL ──
       let resolvedUrl = null;
@@ -242,6 +254,17 @@ export default function ReadNFCScreen() {
     );
   }
 
+  // Loading state — card detected, reading chip + server data
+  if (step === 'loading') {
+    return (
+      <View style={styles.readingCenter}>
+        <ActivityIndicator size="large" color="#f58340" />
+        <Text style={styles.readingTitle}>Reading card…</Text>
+        <Text style={styles.readingSubtitle}>Keep the card on the phone</Text>
+      </View>
+    );
+  }
+
   // Error state
   if (step === 'error') {
     return (
@@ -270,6 +293,19 @@ export default function ReadNFCScreen() {
           <Text style={styles.scanAgainText}>Scan Again</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Blank-card notice — no NDEF URL written */}
+      {!ndefUrl && (
+        <View style={styles.blankBanner}>
+          <Ionicons name="document-outline" size={24} color="#b8860b" />
+          <View style={{flex: 1}}>
+            <Text style={styles.blankBannerTitle}>Card is completely blank</Text>
+            <Text style={styles.blankBannerText}>
+              No NDEF data is written to this card.
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Server card data */}
       {isLogged && (
@@ -416,6 +452,21 @@ const styles = StyleSheet.create({
     borderColor: '#f58340',
   },
   scanAgainText: {color: '#f58340', fontSize: 13, fontWeight: '600'},
+
+  // Blank-card banner
+  blankBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff8e1',
+    borderColor: '#ffe082',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 12,
+  },
+  blankBannerTitle: {fontSize: 15, fontWeight: 'bold', color: '#7a5d00'},
+  blankBannerText: {fontSize: 13, color: '#9a7b1a', marginTop: 2},
 
   // Cards
   card: {marginBottom: 12},

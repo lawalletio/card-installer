@@ -1,7 +1,6 @@
 import React, {useCallback, useRef, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -129,6 +128,16 @@ export default function WipeCardScreen() {
     setStepSynced('reading');
     setErrorMsg(null);
     try {
+      // Clear any stale NFC request left over from another screen/scan so
+      // requestTechnology doesn't fail with "one request at a time" when
+      // arriving from Bulk Create / Read NFC.
+      await NfcManager.start().catch(() => {});
+      await NfcManager.cancelTechnologyRequest().catch(() => {});
+      if (cancelledByBlur.current) {
+        cancelledByBlur.current = false;
+        setStepSynced('tap');
+        return;
+      }
       await NfcManager.requestTechnology(NfcTech.IsoDep, {
         alertMessage: 'Hold your card to the back of your phone',
       });
@@ -182,20 +191,7 @@ export default function WipeCardScreen() {
     }
   }, [authFetch, handleError, setStepSynced]);
 
-  // ── Phase 3: confirmation dialog ───────────────────────────────────────────
-
-  const handleResetPress = () => {
-    Alert.alert(
-      'Reset card?',
-      'This will permanently wipe all keys on the physical card and delete it from the server. This cannot be undone.',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {text: 'Reset', style: 'destructive', onPress: startWipe},
-      ],
-    );
-  };
-
-  // ── Phase 4: NFC wipe + server delete ──────────────────────────────────────
+  // ── Phase 3: NFC wipe + server delete (no confirmation prompt) ─────────────
 
   const startWipe = useCallback(async () => {
     if (!card) return;
@@ -207,6 +203,15 @@ export default function WipeCardScreen() {
     const id = card.id;
 
     try {
+      // Clear any stale NFC request so requestTechnology doesn't fail with
+      // "one request at a time" when arriving from another NFC screen.
+      await NfcManager.start().catch(() => {});
+      await NfcManager.cancelTechnologyRequest().catch(() => {});
+      if (cancelledByBlur.current) {
+        cancelledByBlur.current = false;
+        setStepSynced('info');
+        return;
+      }
       await NfcManager.requestTechnology(NfcTech.IsoDep, {
         alertMessage: 'Hold card steady while keys are wiped…',
       });
@@ -398,7 +403,7 @@ export default function WipeCardScreen() {
         </PaperCard.Content>
       </PaperCard>
 
-      <TouchableOpacity style={styles.dangerBtn} onPress={handleResetPress}>
+      <TouchableOpacity style={styles.dangerBtn} onPress={startWipe}>
         <Ionicons
           name="trash-outline"
           size={18}

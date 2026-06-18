@@ -26,6 +26,16 @@ public class MyReactModule extends ReactContextBaseJavaModule {
         return getClass().getSimpleName();
     }
 
+    // Expose the app version (from BuildConfig) to JS as constants, so the
+    // Login screen can display the currently installed build.
+    @Override
+    public Map<String, Object> getConstants() {
+        final Map<String, Object> constants = new HashMap<>();
+        constants.put("versionName", BuildConfig.VERSION_NAME);
+        constants.put("versionCode", BuildConfig.VERSION_CODE);
+        return constants;
+    }
+
     @ReactMethod
     public void setCardMode(String cardmode) {
         Log.d(TAG, "setCardMode: "+cardmode );

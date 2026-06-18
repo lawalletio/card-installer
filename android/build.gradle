@@ -22,3 +22,21 @@ buildscript {
         classpath("com.facebook.react:react-native-gradle-plugin")
     }
 }
+
+// react-native-vision-camera hardcodes `minSdkVersion 21` in its own module
+// build.gradle, but it links react-native-reanimated's prefab which is built
+// for minSdk 23. That mismatch throws CXX1214 ("minSdkVersion 21 but library
+// was built for 23") whenever the native build is re-configured (e.g. after a
+// dependency is added). Force the vision-camera module up to the app's minSdk
+// (23) so its CMake targets android-23 and the reanimated prefab links cleanly.
+subprojects { subproject ->
+    afterEvaluate {
+        if (subproject.name == 'react-native-vision-camera') {
+            android {
+                defaultConfig {
+                    minSdkVersion 23
+                }
+            }
+        }
+    }
+}

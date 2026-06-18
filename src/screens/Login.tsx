@@ -6,6 +6,7 @@ import {
   Alert,
   Animated,
   Image,
+  NativeModules,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +18,15 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useLaWallet} from '../providers/LaWallet';
 import {secondsUntilExpiry} from '../lib/jwt';
 import type {InstanceSettings} from '../types/response';
+
+// App version from the native BuildConfig (exposed by MyReactModule), with a
+// package.json fallback so something always shows.
+const APP_VERSION = (() => {
+  const mod = (NativeModules as any).MyReactModule;
+  const name = mod?.versionName ?? require('../../package.json').version;
+  const code = mod?.versionCode;
+  return code != null ? `v${name} (build ${code})` : `v${name}`;
+})();
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -330,6 +340,8 @@ export default function LoginScreen({route}) {
             )}
           </>
         )}
+
+        <Text style={styles.versionText}>{APP_VERSION}</Text>
       </ScrollView>
 
       {isLoggingIn && (
@@ -351,6 +363,13 @@ export default function LoginScreen({route}) {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 24,
+  },
+  versionText: {
+    textAlign: 'center',
+    color: '#9aa0a6',
+    fontSize: 12,
+    marginTop: 16,
+    marginBottom: 8,
   },
 
   // ── Instance hero ──

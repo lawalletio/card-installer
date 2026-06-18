@@ -4,7 +4,9 @@ import {useNavigation} from '@react-navigation/native';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
+  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -185,8 +187,26 @@ export default function CreateBulkBoltcardScreen() {
         });
 
         if (!createRes.ok) {
-          const msg = await createRes.text().catch(() => '');
-          alert(`Server error ${createRes.status}: ${msg}`);
+          const raw = await createRes.text().catch(() => '');
+          let parsed: any = null;
+          try {
+            parsed = raw ? JSON.parse(raw) : null;
+          } catch {}
+          const serverMsg = parsed?.message || raw;
+
+          if (createRes.status === 409) {
+            // The chip UID is already registered on the server.
+            const msg = serverMsg || 'A card with this UID already exists.';
+            setError(msg);
+            Alert.alert(
+              'Card already registered',
+              `${msg}\n\nIf you want to re-provision it, wipe the card first.`,
+            );
+          } else {
+            const msg = serverMsg || `Server error ${createRes.status}`;
+            setError(msg);
+            Alert.alert('Could not create card', msg);
+          }
           setCardStatus(CardStatus.IDLE);
           return;
         }
@@ -316,32 +336,46 @@ export default function CreateBulkBoltcardScreen() {
     };
   }, [skin]);
 
-  // Drive NFC on status change
+  // Drive NFC on status change.
   useEffect(() => {
     switch (cardStatus) {
       case CardStatus.READING:
+        // Fresh read: clear any stale card + error, then arm NFC.
         setError(undefined);
         setCardData(undefined);
         startReading();
         break;
-      default:
+      case CardStatus.IDLE:
+        // Back to the gallery: drop the card data.
         setCardData(undefined);
+        break;
+      // CREATING_CARD / WRITING: do NOT touch cardData — the WriteModal needs
+      // it for the whole write. Clearing it here (the old `default` branch) is
+      // exactly why the real write showed the card but never the progress ring:
+      // cardData was reset to undefined the instant WRITING began, so the
+      // modal's `{cardData && <ring/>}` rendered nothing while write() ran on.
+      default:
+        break;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardStatus]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  // NFC / creating in progress
+  // Build the main content (NFC-waiting vs gallery). The WriteModal is rendered
+  // once, OUTSIDE this conditional, so it stays mounted and its progress ring
+  // keeps its state across the content switch.
+  let content;
   if (cardStatus === CardStatus.READING || cardStatus === CardStatus.CREATING_CARD) {
-    // Fit the selected card image within a bounded preview box (no cropping).
-    let previewW = 200;
+    const screen = Dimensions.get('window');
+    let previewW = screen.width - 32; // ~16px margin each side
     let previewH = previewW / skinAspect;
-    if (previewH > 240) {
-      previewH = 240;
+    const maxH = screen.height * 0.4;
+    if (previewH > maxH) {
+      previewH = maxH;
       previewW = previewH * skinAspect;
     }
-    return (
+    content = (
       <View style={styles.nfcCenter}>
         <View style={styles.nfcMain}>
           <Animated.View>
@@ -382,10 +416,9 @@ export default function CreateBulkBoltcardScreen() {
         )}
       </View>
     );
-  }
-
-  // Skin gallery (IDLE state)
-  return (
+  } else {
+    // Skin gallery (IDLE state)
+    content = (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -491,7 +524,13 @@ export default function CreateBulkBoltcardScreen() {
           </TouchableOpacity>
         </View>
       )}
+    </View>
+    );
+  }
 
+  return (
+    <View style={{flex: 1}}>
+      {content}
       <WriteModal
         visible={cardStatus === CardStatus.WRITING}
         onCancel={() => setCardStatus(CardStatus.IDLE)}
@@ -660,7 +699,7 @@ const styles = StyleSheet.create({
   nfcCenter: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 16,
     paddingTop: 40,
     paddingBottom: 28,
     backgroundColor: '#f2f2f2',

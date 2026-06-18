@@ -224,15 +224,11 @@ public class MainActivity extends ReactActivity {
    * Initialize the library and register to this activity.
    */
   private void initializeLibrary() {
-      libInstance = NxpNfcLib.getInstance();
-      try {
-          libInstance.registerActivity(this, packageKey);
-      } catch (NxpNfcLibException ex) {
-          showMessage(ex.getMessage(), TOAST);
-      } catch (Exception e) {
-          // do nothing added to handle the crash if any
-          showMessage(e.getMessage(), TOAST);
-      }
+      // TapLinX (NXP) is intentionally NOT registered. Every NTAG424 operation
+      // runs through the JS Ntag424 implementation over react-native-nfc-manager
+      // (raw ISO-DEP APDUs + AES via CryptoJS), which needs no license.
+      // Calling registerActivity() would trigger "TapLinX registration failed
+      // after Free Trial. Provide Valid License Key" once the trial expires.
   }
 
   private void initializeKeys() {
@@ -297,53 +293,11 @@ public class MainActivity extends ReactActivity {
    */
   @Override
   public void onNewIntent(final Intent intent) {
-    // Log.w(TAG, "onNewIntent() action:"+intent.getAction());
-    //if intent is not an NDEF discovery then do super and return;
-    if (!intent.getAction().equals("android.nfc.action.NDEF_DISCOVERED") && !intent.getAction().equals("android.nfc.action.TAG_DISCOVERED")) {
-      super.onNewIntent(intent);
-    }
-    else {
-      try {
-        CardType type = libInstance.getCardType(intent); //Get the type of the card
-        if (type == CardType.UnknownCard) {
-          showMessage(getString(R.string.UNKNOWN_TAG), PRINT);
-          throw new Exception("Unknown Tag. Maybe try again?");
-        }
-        else if (type != CardType.NTAG424DNA && type != CardType.NTAG424DNATagTamper) {
-          showMessage("NFC Card must be of type NTAG424DNA or NTAG424DNATT", PRINT);
-          throw new Exception("NFC Card must be of type  NTAG424DNA or NTAG424DNATT");
-        }
-        BoltCardWrapper boltCardWrapper = new BoltCardWrapper(libInstance, type);
-
-        byte[] NTAG424DNA_APP_NAME = {(byte) 0xD2, (byte) 0x76, 0x00, 0x00, (byte) 0x85, 0x01, 0x01};
-        boltCardWrapper.isoSelectApplicationByDFName(NTAG424DNA_APP_NAME);
-        
-        if(this.cardmode.equals(CARD_MODE_RESETKEYS)) {
-          doresetKeys(boltCardWrapper);
-        }
-        else if(this.cardmode.equals(CARD_MODE_CREATEBOLTCARD)) {
-          createBoltCard(boltCardWrapper);
-        }
-        else { //this.cardmode == CARD_MODE_READ, or if in doubt, just read the card
-          readCard(boltCardWrapper);
-        }
-        super.onNewIntent(intent);
-      } 
-      catch (Exception e) {
-        Log.e(TAG, "Some exception occurred", e);
-        if(e instanceof UsageException && e.getMessage() == "BytesToRead should be greater than 0") {
-          WritableMap params = Arguments.createMap();
-          params.putString("message", "This NFC card has not been formatted.");
-          sendEvent("NFCError", params);
-        }
-        else {
-          WritableMap params = Arguments.createMap();
-          params.putString("message", "Error: "+e.getMessage());
-          sendEvent("NFCError", params);
-        }
-      }
-    }
-    
+    // NFC tags are handled by react-native-nfc-manager (reader mode) together
+    // with the JS Ntag424 implementation — never through the legacy TapLinX
+    // path (which needs a license). Just defer to the framework. This also
+    // fixes the NPE that occurred when intent.getAction() was null.
+    super.onNewIntent(intent);
   }
 
   /**
@@ -871,7 +825,7 @@ public class MainActivity extends ReactActivity {
   @Override
   protected void onPause() {
       super.onPause();
-      libInstance.stopForeGroundDispatch();
+      // NFC foreground dispatch is managed by react-native-nfc-manager.
       if (mReactInstanceManager != null) {
           mReactInstanceManager.onHostPause(this);
       }
@@ -880,8 +834,7 @@ public class MainActivity extends ReactActivity {
   @Override
   protected void onResume() {
       super.onResume();
-
-      libInstance.startForeGroundDispatch();
+      // NFC foreground dispatch is managed by react-native-nfc-manager.
       if (mReactInstanceManager != null) {
           mReactInstanceManager.onHostResume(this, this);
       }
