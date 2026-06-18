@@ -5,7 +5,6 @@
   "scripts": {
     "setup": "./scripts/setup.sh",
     "android": "react-native run-android",
-    "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
     "postinstall": "rn-nodeify --install buffer,process,stream,crypto,events --hack",
