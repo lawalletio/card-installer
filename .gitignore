@@ -16,6 +16,9 @@ local.properties
 # Production upload signing key — NEVER commit (already covered by *.keystore;
 # kept explicit for clarity). Back it up off-machine; git is not a backup.
 android/app/my-upload-key.keystore
+# PKCS12 / PFX keystores (e.g. the .p12 zsp uses for identity linking).
+*.p12
+*.pfx
 
 # node.js
 #
