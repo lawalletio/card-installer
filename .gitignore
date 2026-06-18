@@ -13,6 +13,9 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+# Production upload signing key — NEVER commit (already covered by *.keystore;
+# kept explicit for clarity). Back it up off-machine; git is not a backup.
+android/app/my-upload-key.keystore
 
 # node.js
 #

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-shot dev environment bootstrap for bolt-nfc-android-app.
+# One-shot dev environment bootstrap for card-installer.
 # Installs SDKMAN (Java manager), nvm (Node manager), the pinned JDK and Node,
 # then yarn install. Idempotent — safe to re-run.
 #

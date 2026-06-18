@@ -5,7 +5,7 @@ Android app to provision and wipe **NTAG424 DNA** NFC cards as Boltcards for a
 blank card to write its keys and `lnurlw`, or tap a programmed card to wipe it — a
 contactless, paywave-like experience for the Lightning Network.
 
-> This is the [**lawalletio**](https://github.com/lawalletio/bolt-nfc-android-app)
+> This is the [**lawalletio**](https://github.com/lawalletio/card-installer)
 > fork of [boltcard/bolt-nfc-android-app](https://github.com/boltcard/bolt-nfc-android-app),
 > with LaWallet integration, instance-aware QR-JWT login, a bulk-provisioning flow,
 > tap-to-wipe, and **license-free native NFC**.
@@ -14,7 +14,7 @@ Android only.
 
 ## Current version
 
-**v0.3.0** — see the [latest release](https://github.com/lawalletio/bolt-nfc-android-app/releases/latest).
+**v0.3.0** — see the [latest release](https://github.com/lawalletio/card-installer/releases/latest).
 
 ## What's different in this fork
 
@@ -39,7 +39,7 @@ Android only.
 ## Install
 
 Download the APK from the
-[latest release](https://github.com/lawalletio/bolt-nfc-android-app/releases/latest)
+[latest release](https://github.com/lawalletio/card-installer/releases/latest)
 and install it on your Android phone.
 
 > ⚠️ Release APKs are currently **signed with the debug key** (the production
@@ -94,7 +94,7 @@ Requires Android Studio + Android SDK installed separately
 
 ```bash
 git clone <repo>
-cd bolt-nfc-android-app
+cd card-installer
 yarn setup       # installs SDKMAN, nvm, Zulu 11, Node 18.15, yarn, JS deps
 ```
 
