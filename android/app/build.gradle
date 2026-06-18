@@ -112,8 +112,8 @@ android {
         applicationId "com.lacrypta.cardinstaller"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 26
-        versionName "0.3.1"
+        versionCode 27
+        versionName "0.3.2"
         // Restrict native builds to the configured ABI(s). With ABI splits
         // disabled, this is what actually keeps the (universal) APK arm64-only
         // and stops third-party CMake modules (vision-camera) from building
