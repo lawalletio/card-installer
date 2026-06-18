@@ -1,7 +1,12 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {Animated, Image, StyleSheet, View} from 'react-native';
+import {
+  Animated,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {Text} from 'react-native-paper';
-import Dialog from 'react-native-dialog';
 
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import NfcManager, {Ndef} from 'react-native-nfc-manager';
@@ -285,10 +290,18 @@ export default function WriteModal(props) {
     };
   }, [skin]);
 
+  if (!props.visible) {
+    return null;
+  }
+  // Rendered as an in-tree overlay (NOT react-native-dialog's Modal): a Modal
+  // is a separate surface whose content is starved while the JS thread is busy
+  // with the synchronous NFC/crypto write, so the ring never updated. An
+  // in-tree View updates like the (working) wipe screen.
   return (
-    <Dialog.Container visible={props.visible}>
-      {/* Selected skin preview */}
-      {skin && (
+    <View style={styles.overlay}>
+      <View style={styles.dialogCard}>
+        {/* Selected skin preview */}
+        {skin && (
         <View style={styles.skinPreview}>
           <Image
             source={typeof skin.file === 'string' ? {uri: skin.file} : skin.file}
@@ -299,10 +312,10 @@ export default function WriteModal(props) {
         </View>
       )}
 
-      <Dialog.Title>
-        <Ionicons name="card" size={30} color="green" />
+      <View style={styles.titleRow}>
+        <Ionicons name="card" size={28} color="green" />
         <Text style={styles.text}> Hold NFC card</Text>
-      </Dialog.Title>
+      </View>
 
       {cardData && (
         <View style={styles.body}>
@@ -337,17 +350,49 @@ export default function WriteModal(props) {
         </View>
       )}
 
-      <Dialog.Button label="Close" onPress={props.onCancel} />
-    </Dialog.Container>
+        <TouchableOpacity onPress={props.onCancel} style={styles.closeBtn}>
+          <Text style={styles.closeBtnText}>Close</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+    elevation: 100,
+  },
+  dialogCard: {
+    width: '86%',
+    maxWidth: 360,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  closeBtn: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+  },
+  closeBtnText: {color: '#1976D2', fontSize: 16, fontWeight: '600'},
   skinPreview: {
-    // Bleed past the dialog's 16px content padding so the card is near
-    // full-width, leaving only a tiny (~4px) margin on each side / top.
-    marginTop: -12,
-    marginHorizontal: -12,
     marginBottom: 10,
     alignItems: 'center',
   },
