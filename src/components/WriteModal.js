@@ -28,85 +28,41 @@ const STEPS = [
 ];
 const TOTAL = STEPS.length;
 
-// Determinate circular progress ring built without react-native-svg: two
-// rotating half-disc "blades" over a track, with an inner hole that turns the
-// filled disc into a ring. `progress` is an Animated.Value in [0, 1].
+// Determinate circular progress, built without react-native-svg so it always
+// renders inside react-native-dialog's Modal: a circular track that fills from
+// the bottom (an Animated height clipped to the circle by overflow:hidden),
+// with an inner hole turning it into a ring. progress is Animated.Value [0,1].
 function CircularProgress({progress, size, thickness, tint, track, bg, children}) {
   const r = size / 2;
-  const rightRotate = progress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: ['0deg', '180deg', '180deg'],
+  const fillHeight = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, size],
   });
-  const leftRotate = progress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: ['180deg', '180deg', '360deg'],
-  });
-
-  const blade = (rotate, side) => (
-    <View
-      style={{
-        position: 'absolute',
-        top: 0,
-        [side]: 0,
-        width: r,
-        height: size,
-        overflow: 'hidden',
-      }}>
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: side === 'right' ? -r : 0,
-          width: size,
-          height: size,
-          transform: [{rotate}],
-        }}>
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: r,
-            height: size,
-            overflow: 'hidden',
-          }}>
-          <View
-            style={{
-              width: size,
-              height: size,
-              borderRadius: r,
-              backgroundColor: tint,
-            }}
-          />
-        </View>
-      </Animated.View>
-    </View>
-  );
-
   return (
     <View
       style={{
         width: size,
         height: size,
+        borderRadius: r,
+        overflow: 'hidden',
+        backgroundColor: track,
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-      {/* Track */}
-      <View
+      {/* Fill rises from the bottom as progress increases */}
+      <Animated.View
         style={{
           position: 'absolute',
-          width: size,
-          height: size,
-          borderRadius: r,
-          backgroundColor: track,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: fillHeight,
+          backgroundColor: tint,
         }}
       />
-      {blade(rightRotate, 'right')}
-      {blade(leftRotate, 'left')}
-      {/* Inner hole turns the disc into a ring */}
+      {/* Inner hole turns the filled disc into a ring */}
       <View
         style={{
-          position: 'absolute',
           width: size - thickness * 2,
           height: size - thickness * 2,
           borderRadius: (size - thickness * 2) / 2,
